@@ -1,4 +1,4 @@
-# Jeu du Nombre Mystère (Client-Serveur en C)
+# Jeu de devinette
 
 Ce projet est une implémentation en C d’un jeu de devinettes multijoueur utilisant les **sockets TCP/IP**. Le serveur choisit un nombre aléatoire entre 0 et 100, et les clients doivent le deviner. Le premier à trouver gagne !
 
