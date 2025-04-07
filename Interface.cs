@@ -1,6 +1,6 @@
-using System;
+﻿using System;
 using Gtk;
-using System.Diagnostics;  // Pour exécuter un processus externe (le client en C)
+using System.Diagnostics;
 
 public class InterfaceClient : Window
 {
@@ -16,7 +16,7 @@ public class InterfaceClient : Window
         _btnEnvoyer.Clicked += OnEnvoyerClicked;
 
         // Ajouter le bouton à la fenêtre
-        VBox vbox = new VBox();
+        Box vbox = new Box(Orientation.Vertical, 0); // Utilisation de Box au lieu de VBox
         vbox.PackStart(_btnEnvoyer, false, false, 0);
         Add(vbox);
 
@@ -29,7 +29,6 @@ public class InterfaceClient : Window
     private void OnEnvoyerClicked(object sender, EventArgs e)
     {
         // Quand l'utilisateur clique sur le bouton "Envoyer", appel à la méthode du client C
-        // Appel de la méthode client pour envoyer un message via les sockets
         Process.Start("chemin/vers/client.exe", "message à envoyer");
     }
 

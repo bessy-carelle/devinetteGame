@@ -1,0 +1,6 @@
+/home/bessy/Documents/Git/devinetteGame/InterfaceGTK/obj/Debug/net8.0/InterfaceGTK.csproj.AssemblyReference.cache
+/home/bessy/Documents/Git/devinetteGame/InterfaceGTK/obj/Debug/net8.0/InterfaceGTK.GeneratedMSBuildEditorConfig.editorconfig
+/home/bessy/Documents/Git/devinetteGame/InterfaceGTK/obj/Debug/net8.0/InterfaceGTK.AssemblyInfoInputs.cache
+/home/bessy/Documents/Git/devinetteGame/InterfaceGTK/obj/Debug/net8.0/InterfaceGTK.AssemblyInfo.cs
+/home/bessy/Documents/Git/devinetteGame/InterfaceGTK/obj/Debug/net8.0/InterfaceGTK.csproj.CoreCompileInputs.cache
+/home/bessy/Documents/Git/devinetteGame/InterfaceGTK/obj/Debug/net8.0/InterfaceGTK.sourcelink.json
