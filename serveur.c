@@ -47,7 +47,11 @@ void *handle_client(void *arg) {
         memset(buffer, 0, BUFFER_SIZE);
         int valread = recv(client_socket, buffer, BUFFER_SIZE - 1, MSG_PEEK);
         if (valread <= 0) {
-            printf("Client %s déconnecté.\n", pseudo);
+            if (valread == 0) {
+                printf("Client %s déconnecté.\n", pseudo);
+            } else {
+                printf("Client %s déconnecté de maniere inattendue.\n", pseudo);
+            }
             break;
         }
 
