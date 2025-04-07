@@ -27,10 +27,52 @@ void *handle_client(void *arg) {
     int attempts = 0;  // Compteur de tentatives
     char buffer[BUFFER_SIZE] = {0};
 
+    char pseudo[BUFFER_SIZE];
+    memset(pseudo, 0, BUFFER_SIZE);
+
+    // Lire le pseudo envoyé par le client
+    int pseudo_len = recv(client_socket, pseudo, BUFFER_SIZE - 1, 0);
+    if (pseudo_len <= 0) {
+        printf("Erreur lors de la réception du pseudo.\n");
+        close(client_socket);
+        free(arg);
+        pthread_exit(NULL);
+    }
+    pseudo[pseudo_len] = '\0';
+    printf(" Nouveau joueur connecté : %s\n", pseudo);
+
+
     while (1) {
         // Lire le nombre envoyé par le client
         memset(buffer, 0, BUFFER_SIZE);
-        int valread = read(client_socket, &guess, sizeof(guess)); // Lecture de l'entier
+        int valread = recv(client_socket, buffer, BUFFER_SIZE - 1, MSG_PEEK);
+        if (valread <= 0) {
+            if (valread == 0) {
+                printf("Client %s déconnecté.\n", pseudo);
+            } else {
+                printf("Client %s déconnecté de maniere inattendue.\n", pseudo);
+            }
+            break;
+        }
+
+        // Vérifie si c'est du texte (exit)
+        if (valread < sizeof(int)) {
+            recv(client_socket, buffer, BUFFER_SIZE - 1, 0);  // Consommer
+            buffer[valread] = '\0';
+            if (strcmp(buffer, "exit") == 0) {
+                printf("🚪 %s a quitté la partie.\n", pseudo);
+                break;
+            } else {
+                strcpy(buffer, "Commande inconnue.");
+                send(client_socket, buffer, strlen(buffer), 0);
+                continue;
+            }
+        }
+
+        // Lecture de l'entier normalement
+        recv(client_socket, &guess, sizeof(guess), 0);
+
+
         if (valread <= 0) {
             printf("Client déconnecté.\n");
             break;
@@ -53,12 +95,15 @@ void *handle_client(void *arg) {
         } else if (guess > number_to_guess) {
             strcpy(buffer, "Trop grand");
         } else {
-            // Le client a deviné le bon nombre
-            strcpy(buffer, "Bravo, vous avez gagné !");
-            send(client_socket, buffer, strlen(buffer), 0);
-            
-            // Annonce du gagnant à tous les clients
-            broadcast_message("Un client a deviné le bon nombre, il a gagné !\n");
+        printf(" %s a deviné le bon nombre (%d) !\n", pseudo, number_to_guess);
+
+        strcpy(buffer, "Bravo, vous avez gagné !");
+        send(client_socket, buffer, strlen(buffer), 0);
+
+        // Annonce du gagnant à tous les clients
+        char announce[BUFFER_SIZE];
+        snprintf(announce, BUFFER_SIZE, " Le joueur %s a deviné le bon nombre !\n", pseudo);
+        broadcast_message(announce);
 
             // Fermer la connexion avec tous les clients
             for (int i = 0; i < client_count; i++) {
