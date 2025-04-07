@@ -3,156 +3,85 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <pthread.h>
-#include <time.h>
+#include <sys/socket.h>
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
-#define MAX_TRIES 10  // Nombre maximum de tentatives par client
 
-int number_to_guess;  // Le nombre à deviner pour tous les clients
-int client_sockets[1024];  // Tableau des sockets des clients
-int client_count = 0;  // Compteur de clients connectés
-
-void broadcast_message(const char *message) {
-    // Envoie un message à tous les clients connectés
-    for (int i = 0; i < client_count; i++) {
-        send(client_sockets[i], message, strlen(message), 0);
-    }
+void send_message(int sock, const char *message) {
+    send(sock, message, strlen(message), 0);
 }
 
-void *handle_client(void *arg) {
-    int client_socket = *(int *)arg;
-    int guess = -1;
-    int attempts = 0;  // Compteur de tentatives
-    char buffer[BUFFER_SIZE] = {0};
+void handle_client_guess(int client_sock) {
+    char buffer[BUFFER_SIZE];
+    int number_to_guess = 42;  // Exemple de numéro à deviner
+    char welcome_message[] = "Bienvenue, vous devez deviner le numéro : 42";
 
-    while (1) {
-        // Lire le nombre envoyé par le client
-        memset(buffer, 0, BUFFER_SIZE);
-        int valread = read(client_socket, &guess, sizeof(guess)); // Lecture de l'entier
-        if (valread <= 0) {
-            printf("Client déconnecté.\n");
-            break;
-        }
+    // Envoi du message de bienvenue
+    send_message(client_sock, welcome_message);
 
-        printf("Tentative du client : %d\n", guess);
-        attempts++;  // Incrémenter le compteur de tentatives
+    // Demander à l'utilisateur de taper sa réponse
+    send_message(client_sock, "Entrez votre réponse : ");
 
-        // Vérifier si le client a dépassé le nombre de tentatives
-        if (attempts > MAX_TRIES) {
-            strcpy(buffer, "Vous avez dépassé le nombre maximum de tentatives. Vous êtes déconnecté.");
-            send(client_socket, buffer, strlen(buffer), 0);
-            close(client_socket);
-            break;  // Quitter la boucle et déconnecter le client
-        }
+    // Recevoir la réponse du client
+    recv(client_sock, buffer, sizeof(buffer) - 1, 0);
+    int guess = atoi(buffer);
 
-        // Vérifier la tentative
-        if (guess < number_to_guess) {
-            strcpy(buffer, "Trop petit");
-        } else if (guess > number_to_guess) {
-            strcpy(buffer, "Trop grand");
-        } else {
-            // Le client a deviné le bon nombre
-            strcpy(buffer, "Bravo, vous avez gagné !");
-            send(client_socket, buffer, strlen(buffer), 0);
-            
-            // Annonce du gagnant à tous les clients
-            broadcast_message("Un client a deviné le bon nombre, il a gagné !\n");
-
-            // Fermer la connexion avec tous les clients
-            for (int i = 0; i < client_count; i++) {
-                close(client_sockets[i]);
-            }
-
-            break; // Fin de la partie, on quitte la boucle
-        }
-
-        // Envoyer un retour au client
-        send(client_socket, buffer, strlen(buffer), 0);
+    if (guess == number_to_guess) {
+        send_message(client_sock, "Bravo, vous avez trouvé le bon numéro !");
+    } else {
+        send_message(client_sock, "Désolé, ce n'est pas le bon numéro.");
     }
-
-    // Retirer le client de la liste des clients
-    for (int i = 0; i < client_count; i++) {
-        if (client_sockets[i] == client_socket) {
-            // Déplacer les éléments du tableau pour combler le vide
-            for (int j = i; j < client_count - 1; j++) {
-                client_sockets[j] = client_sockets[j + 1];
-            }
-            client_count--;
-            break;
-        }
-    }
-
-    // Fermer le socket du client
-    free(arg);  // Libérer la mémoire allouée pour le socket
-    pthread_exit(NULL);
 }
 
 int main() {
-    srand(time(NULL));  // Initialisation du générateur de nombres aléatoires
-    number_to_guess = rand() % 101; // Génération du nombre à deviner entre 0 et 100
-    printf("Le nombre à deviner est : %d\n", number_to_guess); // Pour vérifier, uniquement côté serveur
-
-    int server_fd, new_socket;
-    struct sockaddr_in address;
-    int addrlen = sizeof(address);
+    int sock_serveur, sock_client;
+    struct sockaddr_in serv_addr, cli_addr;
+    socklen_t cli_len = sizeof(cli_addr);
 
     // Création du socket
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("Erreur socket");
-        exit(EXIT_FAILURE);
+    sock_serveur = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock_serveur == -1) {
+        perror("Échec de la création du socket");
+        return 1;
     }
 
-    // Configuration de l'adresse du serveur
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;  // Accepte toute connexion locale
-    address.sin_port = htons(PORT);
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(PORT);
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
 
-    // Attachement du socket au port
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
-        perror("Erreur bind");
-        exit(EXIT_FAILURE);
+    // Liaison du socket
+    if (bind(sock_serveur, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == -1) {
+        perror("Échec de la liaison du socket");
+        return 1;
     }
 
     // Écoute des connexions entrantes
-    if (listen(server_fd, 5) < 0) {
-        perror("Erreur listen");
-        exit(EXIT_FAILURE);
+    if (listen(sock_serveur, 10) == -1) {
+        perror("Échec de l'écoute des connexions");
+        return 1;
     }
 
-    printf("Serveur en attente de connexion...\n");
+    printf("Serveur en écoute sur le port %d...\n", PORT);
 
     while (1) {
-        // Accepter une nouvelle connexion
-        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) {
-            perror("Erreur accept");
+        // Acceptation des connexions entrantes
+        sock_client = accept(sock_serveur, (struct sockaddr *)&cli_addr, &cli_len);
+        if (sock_client == -1) {
+            perror("Échec de l'acceptation de la connexion");
             continue;
         }
 
-        printf("Nouveau client connecté.\n");
+        printf("Un client s'est connecté\n");
 
-        // Ajouter le socket du client à la liste des clients
-        client_sockets[client_count++] = new_socket;
+        // Gérer le jeu avec le client
+        handle_client_guess(sock_client);
 
-        // Allouer de la mémoire pour le socket du client
-        int *client_socket = malloc(sizeof(int));
-        *client_socket = new_socket;
-
-        // Créer un thread pour gérer le client
-        pthread_t thread_id;
-        if (pthread_create(&thread_id, NULL, handle_client, (void *)client_socket) != 0) {
-            perror("Erreur pthread_create");
-            free(client_socket);
-            close(new_socket);
-        }
-
-        // Détacher le thread pour qu'il se libère automatiquement
-        pthread_detach(thread_id);
+        // Fermer la connexion avec le client après la session
+        close(sock_client);
     }
 
-    // Fermer le socket du serveur (ce code ne sera jamais atteint dans cette boucle infinie)
-    close(server_fd);
-
+    // Fermer le socket du serveur
+    close(sock_serveur);
     return 0;
 }
