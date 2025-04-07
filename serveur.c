@@ -8,20 +8,16 @@
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
-#define MAX_CLIENTS 10  // Nombre maximum de clients simultanés
 
 int number_to_guess;  // Le nombre à deviner pour tous les clients
-int client_sockets[MAX_CLIENTS];  // Tableau des sockets des clients
+int client_sockets[1024];  // Tableau des sockets des clients (taille agrandie pour supporter plus de clients)
 int client_count = 0;  // Compteur de clients connectés
-pthread_mutex_t lock;  // Verrou pour gérer l'accès aux ressources partagées (les clients)
 
 void broadcast_message(const char *message) {
     // Envoie un message à tous les clients connectés
-    pthread_mutex_lock(&lock);
     for (int i = 0; i < client_count; i++) {
         send(client_sockets[i], message, strlen(message), 0);
     }
-    pthread_mutex_unlock(&lock);
 }
 
 void *handle_client(void *arg) {
@@ -54,11 +50,9 @@ void *handle_client(void *arg) {
             broadcast_message("Un client a deviné le bon nombre, il a gagné !\n");
 
             // Fermer la connexion avec tous les clients
-            pthread_mutex_lock(&lock);
             for (int i = 0; i < client_count; i++) {
                 close(client_sockets[i]);
             }
-            pthread_mutex_unlock(&lock);
 
             break; // Fin de la partie, on quitte la boucle
         }
@@ -68,7 +62,6 @@ void *handle_client(void *arg) {
     }
 
     // Retirer le client de la liste des clients
-    pthread_mutex_lock(&lock);
     for (int i = 0; i < client_count; i++) {
         if (client_sockets[i] == client_socket) {
             // Déplacer les éléments du tableau pour combler le vide
@@ -79,7 +72,6 @@ void *handle_client(void *arg) {
             break;
         }
     }
-    pthread_mutex_unlock(&lock);
 
     // Fermer le socket du client
     free(arg);  // Libérer la mémoire allouée pour le socket
@@ -90,8 +82,6 @@ int main() {
     srand(time(NULL));  // Initialisation du générateur de nombres aléatoires
     number_to_guess = rand() % 101; // Génération du nombre à deviner entre 0 et 100
     printf("Le nombre à deviner est : %d\n", number_to_guess); // Pour vérifier, uniquement côté serveur
-
-    pthread_mutex_init(&lock, NULL); // Initialiser le mutex pour gérer l'accès aux ressources partagées
 
     int server_fd, new_socket;
     struct sockaddr_in address;
@@ -131,15 +121,8 @@ int main() {
 
         printf("Nouveau client connecté.\n");
 
-        // Ajouter le socket du client à la liste des clients
-        pthread_mutex_lock(&lock);
-        if (client_count < MAX_CLIENTS) {
-            client_sockets[client_count++] = new_socket;
-        } else {
-            printf("Le serveur a atteint le nombre maximum de clients.\n");
-            close(new_socket); // Refuser la connexion si trop de clients
-        }
-        pthread_mutex_unlock(&lock);
+        // Ajouter le socket du client à la liste des clients sans restriction
+        client_sockets[client_count++] = new_socket;
 
         // Allouer de la mémoire pour le socket du client
         int *client_socket = malloc(sizeof(int));
@@ -159,9 +142,6 @@ int main() {
 
     // Fermer le socket du serveur (ce code ne sera jamais atteint dans cette boucle infinie)
     close(server_fd);
-
-    // Libération des ressources
-    pthread_mutex_destroy(&lock);  // Détruire le mutex
 
     return 0;
 }
