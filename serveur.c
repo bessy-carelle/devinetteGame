@@ -98,7 +98,7 @@ void *handle_client(void *arg) {
 
         // Annonce du gagnant à tous les clients
         char announce[BUFFER_SIZE];
-        snprintf(announce, BUFFER_SIZE, "🎉 Le joueur %s a deviné le bon nombre !\n", pseudo);
+        snprintf(announce, BUFFER_SIZE, " Le joueur %s a deviné le bon nombre !\n", pseudo);
         broadcast_message(announce);
 
             // Fermer la connexion avec tous les clients
