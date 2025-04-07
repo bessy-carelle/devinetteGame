@@ -98,13 +98,13 @@ Serveur : Bravo, vous avez gagné !
 
 - Relancer une partie automatiquement.
 - Ajouter un système de scores ou de classement.
-- Interface graphique en C (avec ncurses par exemple).
-- Version Python pour le client.
+- Interface graphique en C.
+- Envoyer directement un message à tout les clients quand un utilisateur a gagné
 
 ---
 
 ## 👤 Auteur
 
-Projet réalisé par **Rajaonarivo Fidera** , **Randrianjanaka Israel** , **Igiraneza Bessy**
+Projet réalisé par **Rajaonarivo Fiderana** , **Randrianjanaka Israel** , **Igiraneza Bessy**
 
 ---
