@@ -8,9 +8,10 @@
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
+#define MAX_TRIES 10  // Nombre maximum de tentatives par client
 
 int number_to_guess;  // Le nombre à deviner pour tous les clients
-int client_sockets[1024];  // Tableau des sockets des clients (taille agrandie pour supporter plus de clients)
+int client_sockets[1024];  // Tableau des sockets des clients
 int client_count = 0;  // Compteur de clients connectés
 
 void broadcast_message(const char *message) {
@@ -23,6 +24,7 @@ void broadcast_message(const char *message) {
 void *handle_client(void *arg) {
     int client_socket = *(int *)arg;
     int guess = -1;
+    int attempts = 0;  // Compteur de tentatives
     char buffer[BUFFER_SIZE] = {0};
 
     while (1) {
@@ -35,6 +37,15 @@ void *handle_client(void *arg) {
         }
 
         printf("Tentative du client : %d\n", guess);
+        attempts++;  // Incrémenter le compteur de tentatives
+
+        // Vérifier si le client a dépassé le nombre de tentatives
+        if (attempts > MAX_TRIES) {
+            strcpy(buffer, "Vous avez dépassé le nombre maximum de tentatives. Vous êtes déconnecté.");
+            send(client_socket, buffer, strlen(buffer), 0);
+            close(client_socket);
+            break;  // Quitter la boucle et déconnecter le client
+        }
 
         // Vérifier la tentative
         if (guess < number_to_guess) {
@@ -121,7 +132,7 @@ int main() {
 
         printf("Nouveau client connecté.\n");
 
-        // Ajouter le socket du client à la liste des clients sans restriction
+        // Ajouter le socket du client à la liste des clients
         client_sockets[client_count++] = new_socket;
 
         // Allouer de la mémoire pour le socket du client
