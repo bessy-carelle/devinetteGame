@@ -60,6 +60,9 @@ void *handle_client(void *arg) {
             // Annonce du gagnant à tous les clients
             broadcast_message("Un client a deviné le bon nombre, il a gagné !\n");
 
+            // Affichage d'un message sur le serveur pour notifier qu'un client a trouvé la réponse
+            printf("Un client a deviné le bon nombre (%d) !, Les autres clients seront déconnectés à la prochaine tentative\n", number_to_guess);
+
             // Fermer la connexion avec tous les clients
             for (int i = 0; i < client_count; i++) {
                 close(client_sockets[i]);
